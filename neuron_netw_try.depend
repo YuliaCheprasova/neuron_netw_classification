@@ -1,0 +1,8 @@
+# depslib dependency file v1.0
+1709985806 source:c:\programs\disk_c\codeblocks_projects\neuron_netw_try\main.cpp
+	<iostream>
+	<ctime>
+	<cmath>
+	<fstream>
+	<string>
+
