@@ -50,12 +50,12 @@ void multmatrix(double*** w, double** u, double** s, int* numneuron, int current
 int main()
 {
     ofstream fout("Qmeans.txt");
-    ifstream iris("iris34_train.txt");
+    ifstream iris("ring.dat");
     setlocale(LC_ALL, "Rus");
     srand(time(0));
-    int M=105, n, i, j, k, m, numiter = 1000, numenter = 1, numoutput = 3, L = 2; //(2 скрытых, 1 входной, 1 выходной, но веса при этом считаются три раза)
+    int M=7400, n, i, j, k, m, numiter = 1000, numenter = 20, numoutput = 2, L = 1, i_max=0; //(2 скрытых, 1 входной, 1 выходной, но веса при этом считаются три раза)
     //M-объем выборки, numenter-кол.входов, numneuron - кол.нейронов, n - номер итерации, m - номер наблюдения,
-    double h = 0.1, e_temp, Q_temp, step, st = -0.3, fin = 0.5, summ_exp;
+    double h = 0.001, e_temp, Q_temp, step, st = -0.3, fin = 0.5, summ_exp, s_max, y_max, count_accuracy;
     string line;
 
 
@@ -73,15 +73,15 @@ int main()
     }
     cout << "Количество выходов ";
     cin >> numneuron[L+1];*/
-    numneuron[0]=2;
-    numneuron[1]=8;
-    numneuron[2]=4;
+    numneuron[0]=numenter;
+    numneuron[1]=20;
+    //numneuron[2]=2;
     numneuron[L+1]=numoutput;// в выходном слое один "нейрон"
 
-    double** data = new double* [105];
-    for (i = 0; i < 105; i++)
+    double** data = new double* [M];
+    for (i = 0; i < M; i++)
     {
-        data[i] = new double[3];
+        data[i] = new double[numoutput];
     }
     double* y_last = new double [numoutput];
     double **d = new double* [M];
@@ -150,9 +150,9 @@ int main()
 
 
     // начальные значения переменных
-    for (i = 0; i < 105; i++)
+    for (i = 0; i < M; i++)
     {
-        for (j = 0; j < 3; j++)
+        for (j = 0; j < numoutput; j++)
         {
             iris >> data[i][j];
         }
@@ -201,9 +201,9 @@ int main()
             {
                 d[i][j]=1;
             }
-            cout << d[i][j] << " ";//проверить тут надо
+            //cout << d[i][j] << " ";//проверить тут надо
         }
-        cout << endl;
+        //cout << endl;
     }
     //fout << "\n";
 
@@ -214,20 +214,26 @@ int main()
     {
         cout << "Iteration " << n << endl;
         Q_temp = 0;
-
+        count_accuracy=0;
         for (m = 0;m < M; m++)// сейчас он у меня как будто пытается подстроиться под все наблюдения, и только потом идет на следующую итерацию
         {
             summ_exp = 0;
             // расчет s и y
             multmatrix(w, u, s, numneuron, m, L, b, y);
+            s_max = s[L][0];
+            for(i = 1; i < numneuron[L+1]; i++)
+            {
+                if(s[L][i]>s_max)
+                    s_max=s[L][i];
+            }
             for(i = 0; i < numneuron[L+1]; i++)
             {
-                summ_exp+=exp(s[L][i]);// найти максимальное s и вычесть это значение из всех s, посчитать accuracy
+                summ_exp+=exp(s[L][i]-s_max);// найти максимальное s и вычесть это значение из всех s, посчитать accuracy
             }
             // для выходного слоя
             for(i = 0; i < numneuron[L+1]; i++)
             {
-                y_last[i] = exp(s[L][i])/summ_exp;
+                y_last[i] = exp(s[L][i]-s_max)/summ_exp;// почему то y больше единицы!!!
                 e[L][i] = y_last[i]-d[m][i];
                 delta[L][i] = e[L][i];
             }
@@ -264,21 +270,54 @@ int main()
                     }
                 }
             }
+            y_max=y_last[0];
+            i_max = 0;
             for(i = 0; i < numneuron[L+1]; i++)
             {
                  if(n!=numiter-1)
                 {
                     Q_temp-=log(y_last[i])*d[m][i];
+                    if(y_last[i]>y_max)
+                    {
+                        y_max=y_last[i];
+                        i_max = i;
+                    }
                 }
                 if(n==numiter-1)
                 {
                     multmatrix(w, u, s, numneuron, m, L, b, y);
                     Q_temp-=log(y_last[i])*d[m][i];
+                    if(y_last[i]>y_max)
+                    {
+                        y_max=y_last[i];
+                        i_max = i;
+                    }
                     //fout << s[2][0] << "\n";
                 }
             }
+
+
+                //cout << "i_max " << i_max << endl;
+
+            if(d[m][i_max]==1)
+            {
+                count_accuracy+=1;
+            }
+            //else
+            {
+                //if(n==999)
+                {
+                    for(i = 0; i < numneuron[L+1]; i++)
+                    {
+                        cout << "y " << y_last[i] << "\t";
+                        cout << "d "<< d[m][i] << endl;
+                    }
+                    cout << endl;
+                }
+            }
         }
-        cout << Q_temp/M << endl;
+        cout << "Q " << Q_temp/M << endl;
+        cout << "Точность " << count_accuracy/M << endl;
         //fout << Q_temp/M << "\n";
     }
 
