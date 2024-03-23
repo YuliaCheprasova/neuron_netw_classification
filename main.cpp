@@ -48,15 +48,14 @@ void multmatrix(double*** w, double** u, double** s, int* numneuron, int current
 
 
 int main()
-{
+{   // написать по поводу еще одного датасета что-то созвучное с mnist
     ofstream fout("Qmeans.txt");
-    ifstream iris("ring.dat");
+    ifstream iris("mnist_train.csv");
     setlocale(LC_ALL, "Rus");
     srand(time(0));
-    int M=7400, n, i, j, k, m, numiter = 1000, numenter = 20, numoutput = 2, L = 1, i_max=0; //(2 скрытых, 1 входной, 1 выходной, но веса при этом считаются три раза)
+    int M=6000, n, i, j, k, m, numiter = 1000, numenter = 784, numoutput = 10, L = 1, i_max=0; //(2 скрытых, 1 входной, 1 выходной, но веса при этом считаются три раза)
     //M-объем выборки, numenter-кол.входов, numneuron - кол.нейронов, n - номер итерации, m - номер наблюдения,
     double h = 0.001, e_temp, Q_temp, step, st = -0.3, fin = 0.5, summ_exp, s_max, y_max, count_accuracy;
-    string line;
 
 
 
@@ -74,14 +73,15 @@ int main()
     cout << "Количество выходов ";
     cin >> numneuron[L+1];*/
     numneuron[0]=numenter;
-    numneuron[1]=20;
-    //numneuron[2]=2;
+    numneuron[1]=100;//при 50 было 0.86 70 0.89 0.95
+    //numneuron[2]=10;
+    //numneuron[3]=5;
     numneuron[L+1]=numoutput;// в выходном слое один "нейрон"
 
     double** data = new double* [M];
     for (i = 0; i < M; i++)
     {
-        data[i] = new double[numoutput];
+        data[i] = new double[numenter+1];
     }
     double* y_last = new double [numoutput];
     double **d = new double* [M];
@@ -150,20 +150,26 @@ int main()
 
 
     // начальные значения переменных
+    cout << "Начало ввода файла" << endl;
     for (i = 0; i < M; i++)
     {
-        for (j = 0; j < numoutput; j++)
+        for (j = 0; j < numenter+1; j++)
         {
             iris >> data[i][j];
         }
+        if(i%100==0)
+        {
+            cout << i << " строчек прочитано" << endl;
+        }
     }
+    cout << "Конец ввода файла" << endl;
     for(k = 0; k < L+1; k++)
     {
         for(i = 0; i < numneuron[k+1]; i++)
         {
             for(j = 0; j < numneuron[k]; j++)
             {
-                w[k][i][j] = rand() % 3 - 1;//от -1 до 1
+                w[k][i][j] = 2*(double) rand() / (double)(RAND_MAX)-1;//от -1 до 1
             }
         }
     }
@@ -178,7 +184,7 @@ int main()
     {
         for(j = 0; j < numneuron[0]; j++)
         {
-            u[i][j] = data[i][j];
+            u[i][j] = data[i][j+1];
             //fout << u[i][j]<< "\n";
         }
     }
@@ -197,7 +203,7 @@ int main()
     {
         for(j = 0; j < numoutput; j++)
         {
-            if(data[i][2]==j)
+            if(data[i][0]==j)
             {
                 d[i][j]=1;
             }
@@ -295,15 +301,13 @@ int main()
                     //fout << s[2][0] << "\n";
                 }
             }
-
-
                 //cout << "i_max " << i_max << endl;
 
             if(d[m][i_max]==1)
             {
                 count_accuracy+=1;
             }
-            //else
+            /*else
             {
                 //if(n==999)
                 {
@@ -314,11 +318,11 @@ int main()
                     }
                     cout << endl;
                 }
-            }
+            }*/
         }
         cout << "Q " << Q_temp/M << endl;
         cout << "Точность " << count_accuracy/M << endl;
-        //fout << Q_temp/M << "\n";
+        fout << Q_temp/M << "\n";
     }
 
 
