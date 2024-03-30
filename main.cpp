@@ -48,14 +48,15 @@ void multmatrix(double*** w, double** u, double** s, int* numneuron, int current
 
 
 int main()
-{   // написать по поводу еще одного датасета что-то созвучное с mnist
+{
     ofstream fout("Qmeans.txt");
-    ifstream iris("mnist_train.csv");
+    ifstream fin("mnist_train.csv");
+    string line;
     setlocale(LC_ALL, "Rus");
     srand(time(0));
-    int M=6000, n, i, j, k, m, numiter = 1000, numenter = 784, numoutput = 10, L = 1, i_max=0; //(2 скрытых, 1 входной, 1 выходной, но веса при этом считаютс€ три раза)
+    int M=60000, n, i, j, k, m, numiter = 1000, numenter = 784, numoutput = 10, L = 3, i_max=0; //(2 скрытых, 1 входной, 1 выходной, но веса при этом считаютс€ три раза)
     //M-объем выборки, numenter-кол.входов, numneuron - кол.нейронов, n - номер итерации, m - номер наблюдени€,
-    double h = 0.001, e_temp, Q_temp, step, st = -0.3, fin = 0.5, summ_exp, s_max, y_max, count_accuracy;
+    double h = 0.001, e_temp, Q_temp, step, summ_exp, s_max, y_max, count_accuracy, min_u, max_u, beta = 0;
 
 
 
@@ -73,16 +74,16 @@ int main()
     cout << " оличество выходов ";
     cin >> numneuron[L+1];*/
     numneuron[0]=numenter;
-    numneuron[1]=100;//при 50 было 0.86 70 0.89 0.95
-    //numneuron[2]=10;
-    //numneuron[3]=5;
+    numneuron[1]=200;
+    numneuron[2]=100;
+    numneuron[3]=50;
     numneuron[L+1]=numoutput;// в выходном слое один "нейрон"
 
     double** data = new double* [M];
-    for (i = 0; i < M; i++)
+    /*for (i = 0; i < M; i++)
     {
         data[i] = new double[numenter+1];
-    }
+    }*/
     double* y_last = new double [numoutput];
     double **d = new double* [M];
     for(i =0; i < M; i++)
@@ -113,6 +114,15 @@ int main()
         for (j = 0; j < numneuron[i+1]; j++)
         {
             wgrad[i][j] = new double[numneuron[i]];
+        }
+    }
+    double*** v = new double**[L+1];
+    for (i = 0; i < L+1; i++)
+    {
+        v[i] = new double*[numneuron[i+1]];
+        for (j = 0; j < numneuron[i+1]; j++)
+        {
+            v[i][j] = new double[numneuron[i]];
         }
     }
     // как € пон€ла u используетс€ только на первом слое
@@ -151,7 +161,22 @@ int main()
 
     // начальные значени€ переменных
     cout << "Ќачало ввода файла" << endl;
-    for (i = 0; i < M; i++)
+    for(int i=0;i!=M;i++)
+    {
+        data[i] = new double[numenter+1];
+        getline(fin, line);
+        const char *cstr = line.c_str();
+        char* end1;
+        int offset = 0;
+        for(int j=0;j!=numenter+1;j++)
+        {
+            data[i][j] = strtol(cstr+offset, &end1, 10);
+            offset = end1-cstr;
+        }
+        if(i%1000 == 0)
+            cout<<i<<endl;
+    }
+    /*for (i = 0; i < M; i++)
     {
         for (j = 0; j < numenter+1; j++)
         {
@@ -161,7 +186,7 @@ int main()
         {
             cout << i << " строчек прочитано" << endl;
         }
-    }
+    }*/
     cout << " онец ввода файла" << endl;
     for(k = 0; k < L+1; k++)
     {
@@ -173,6 +198,16 @@ int main()
             }
         }
     }
+    for(k = 0; k < L+1; k++)
+    {
+        for(i = 0; i < numneuron[k+1]; i++)
+        {
+            for(j = 0; j < numneuron[k]; j++)
+            {
+                v[k][i][j] = 0;//от -1 до 1
+            }
+        }
+    }
     for (k = 0; k < L+1; k++)
     {
         for (i = 0; i < numneuron[k+1]; i++)
@@ -180,16 +215,33 @@ int main()
             b[k][i] = 0;
         }
     }
-    for(i = 0; i < M; i++)
+    for(j = 0; j < numneuron[0]; j++)//проблема в нормализации, потому что min_u = max_u, может дл€ изображений надо как-то по-другому проводить нормализацию?
     {
-        for(j = 0; j < numneuron[0]; j++)
+        //min_u = data[0][j+1];
+        //max_u = data[0][j+1];
+        for(i = 0; i < M; i++)
         {
             u[i][j] = data[i][j+1];
-            //fout << u[i][j]<< "\n";
+            u[i][j] = u[i][j]/255;
+            /*if(u[i][j]>max_u)
+            {
+                max_u = u[i][j];
+            }
+            if(u[i][j]<min_u)
+            {
+                min_u = u[i][j];
+            }
+            //cout << u[i][j] << endl;*/
         }
+        /*for(i = 0; i < M; i++)
+        {
+            u[i][j] = (u[i][j]-min_u)/(max_u - min_u);
+            //cout << u[i][j] << endl;
+        }*/
+        //cout << "—ледующий признак" << endl;
     }
     //fout << "\n";
-    // создание синтетических данных
+
     for(i = 0; i < M; i++)
     {
         for(j = 0; j < numneuron[L+1]; j++)
@@ -272,10 +324,13 @@ int main()
                         {
                             wgrad[k][i][j] = y[k-1][j]*delta[k][i];
                         }
-                        w[k][i][j] = w[k][i][j]-h*wgrad[k][i][j];
+                        v[k][i][j] = beta*v[k][i][j]-h*wgrad[k][i][j];//beta помен€й
+                        //cout << v[k][i][j] << endl;
+                        w[k][i][j] += v[k][i][j];
                     }
                 }
             }
+
             y_max=y_last[0];
             i_max = 0;
             for(i = 0; i < numneuron[L+1]; i++)
@@ -349,6 +404,15 @@ int main()
         delete[] wgrad[i];
     }
     delete[] wgrad;
+    for (i = 0; i < L+1; i++)
+    {
+        for (j = 0; j < numneuron[i+1]; j++)
+        {
+            delete[] v[i][j];
+        }
+        delete[] v[i];
+    }
+    delete[] v;
     for (i = 0; i < M; i++)
     {
         delete [] u[i];
@@ -384,7 +448,7 @@ int main()
         delete[] b[i];
     }
     delete[] b;
-    for (i = 0; i < 105; i++)
+    for (i = 0; i < M; i++)
     {
         delete[] data[i];
     }
@@ -393,5 +457,5 @@ int main()
     delete[] numneuron;
 
     fout.close();
-    iris.close();
+    fin.close();
 }
